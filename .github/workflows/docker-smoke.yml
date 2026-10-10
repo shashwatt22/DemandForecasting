@@ -8,6 +8,9 @@ on:
       - "Dockerfile.dashboard"
       - ".dockerignore"
       - "Dockerfile"
+      - "models/v2/**"
+      - "dashboard/pages/3_Leakage_Safe_V2.py"
+      - "api/main.py"
       - ".github/workflows/docker-smoke.yml"
 jobs:
   smoke:
@@ -22,7 +25,7 @@ jobs:
       - name: Check service HTTP health
         run: |
           for i in $(seq 1 30); do
-            if curl -fsS http://localhost:8000/ >/dev/null && curl -fsS http://localhost:8501/_stcore/health >/dev/null; then
+            if curl -fsS http://localhost:8000/ >/dev/null && curl -fsS http://localhost:8501/_stcore/health >/dev/null && curl -fsS -X POST http://localhost:8000/api/v2/forecast -H "Content-Type: application/json" -d '{"domain":"airline","horizon":2}' | python -c 'import json,sys; data=json.load(sys.stdin); assert len(data["forecast"]) == 2'; then
               echo "Both services responded."
               exit 0
             fi

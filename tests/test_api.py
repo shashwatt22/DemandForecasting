@@ -72,3 +72,17 @@ def test_forecast_endpoint_returns_valid_payload_or_503(client: TestClient):
         assert body["lower_bound"] <= body["forecast"] <= body["upper_bound"] or \
                abs(body["forecast"] - body["lower_bound"]) < 1e-6  # tolerate boundary
         assert 0.0 <= body["interval_score"] <= 1.0
+
+
+def test_v2_api_requires_valid_domain_and_horizon(client: TestClient):
+    assert client.post("/api/v2/forecast",json={"domain":"unknown","horizon":1}).status_code==422
+    assert client.post("/api/v2/forecast",json={"domain":"airline","horizon":0}).status_code==422
+    r=client.post("/api/v2/forecast",json={"domain":"airline","horizon":2})
+    assert r.status_code in (200,503)
+    if r.status_code==200:
+        result=r.json()
+        assert len(result["forecast"])==2
+        assert len(result["lower_bound"])==2
+        assert len(result["upper_bound"])==2
+        assert result["test_split_used"] is False
+        assert all(a<=b for a,b in zip(result["lower_bound"],result["upper_bound"]))

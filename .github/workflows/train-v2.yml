@@ -36,5 +36,7 @@ jobs:
             echo "Models unchanged."
           else
             git commit -m "Train and publish leakage-safe v2 models from development data [skip ci]"
-            git push
+            git fetch origin "${GITHUB_REF_NAME}"
+            git rebase "origin/${GITHUB_REF_NAME}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
           fi

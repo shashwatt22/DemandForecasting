@@ -3,7 +3,7 @@
 [![CI](https://github.com/shashwatt22/DemandForecasting/actions/workflows/ci.yml/badge.svg)](https://github.com/shashwatt22/DemandForecasting/actions/workflows/ci.yml)
 [![Docker Compose smoke](https://github.com/shashwatt22/DemandForecasting/actions/workflows/docker-smoke.yml/badge.svg)](https://github.com/shashwatt22/DemandForecasting/actions/workflows/docker-smoke.yml)
 
-A machine learning platform for forecasting airline bookings, e-commerce demand, and payment transactions using stacked ensemble learning.
+A two-generation forecasting application. The **default dashboard** now serves leakage-safe v2 historical research models, trained with past-only features and out-of-fold stacking. Legacy synthetic demonstrations remain available in separately labeled pages.
 
 **Live Demo:** [DemandForecasting — Streamlit](https://demandforecasting-shashwat.streamlit.app/)
 
@@ -15,21 +15,31 @@ Python · XGBoost · LightGBM · Scikit-learn · FastAPI · Streamlit · Pandas 
 
 - Demand forecasting across **3 business domains**.
 - Stacked ensemble using XGBoost, LightGBM, and Ridge Regression.
-- 5-fold time-series cross-validation.
-- P10–P90 prediction intervals for uncertainty estimation.
+- Walk-forward out-of-fold stacking for v2; legacy code uses a separate five-fold procedure.
+- Horizon-specific conformal prediction intervals for v2 (nominal 80% target; unseen-test coverage unverified).
 - Interactive dashboards for forecasting, model analysis, and evaluation.
 - REST API with validated prediction endpoints.
 - Automated testing and CI/CD support.
 
-## Model Performance
+## Current model generations
 
-| Domain | RMSE | R² | RMSE Reduction |
-|---|---:|---:|---:|
-| Airline Bookings | 1.24 | 0.998 | 95.3% |
-| E-commerce | 24.1 | 0.953 | 78.7% |
-| Payment Transactions | 51.0 | 0.975 | 87.6% |
+| Route / view | Models | Data | Evaluation |
+|---|---|---|---|
+| Default Streamlit page, `POST /api/v2/forecast` | **V2:** past-only lagged XGBoost + LightGBM + OOF Ridge, calibrated recursively across horizons | Real historical airline passengers; real UCI online retail transactions; synthetic payment series | Last 20% sealed; **no unseen-test performance claim** |
+| Legacy demo pages, `/forecast/*` | Original saved models with historical feature design | Synthetic airline/e-commerce/payments | Known target-leakage risks; should **not** be represented as reliable real forecasting performance |
 
-*Original synthetic-data results; the original feature engineering has target-leakage risks and these headline improvements should not be interpreted as production forecast quality. For leakage-aware research metrics, see [evaluation results](docs/LEAKAGE_SAFE_RESULTS.md).*
+The original 95.3% / 78.7% / 87.6% reduction claims were computed on synthetic data with leakage risks and are **not** performance claims for v2.
+
+### Public development baseline comparison
+
+Rolling origins on the first 80% of each real time series, with the last 20% intentionally withheld:
+
+| Dataset | Seasonality | Seasonal naive RMSE | Fitted ETS RMSE |
+|---|---|---:|---:|
+| Historical international airline passengers | Same month previous year (12 months) | 38.04 | 18.33 |
+| UCI Online Retail daily units | Same weekday previous week (7 days) | 7,084.34 | 6,559.78 |
+
+The UCI source is [Online Retail](https://archive.ics.uci.edu/dataset/352/online+retail); airline monthly counts are the public [AirPassengers CSV](https://raw.githubusercontent.com/jbrownlee/Datasets/master/airline-passengers.csv). The airline data measure passenger totals, **not flight bookings**. Do not compare their RMSE magnitudes across datasets.
 
 ## Architecture
 
@@ -44,7 +54,7 @@ flowchart LR
     F --> G[Streamlit dashboard and FastAPI]
 \`\`\`
 
-> The published live app serves existing saved models. The [leakage-aware research benchmark](docs/LEAKAGE_SAFE_RESULTS.md) runs a separate train/calibration/test workflow; it has not replaced those saved models.
+> The default dashboard now uses **v2** artifacts in `models/v2`; legacy pages retain the original artifacts in `models/saved`. Both are research demonstrations, not real-time airline or payment production systems.
 
 ## Run Locally
 
@@ -75,9 +85,18 @@ Leakage-safe research results (synthetic test periods, **not** live models):
 
 Important: “7 observations” is not necessarily seven calendar days for grouped data. See [full audit and limitations](docs/LEAKAGE_SAFE_RESULTS.md). The Ridge stack did not beat standalone LightGBM for every domain.
 
-## Next steps
+## Retrain V2 and run tests
 
-Replace the legacy deployed models with leak-safe retrained models only after defining production-time feature availability, validating time-specific seasonality and re-running container and API compatibility tests. Investigate payment interval undercoverage.
+```bash
+python -m pip install -r requirements.txt
+python -m pip install statsmodels openpyxl
+python -m src.models.leakage_safe_v2
+pytest -q
+```
+
+The [V2 training workflow](https://github.com/shashwatt22/DemandForecasting/actions/workflows/train-v2.yml) versions the trained artifacts. This training uses 70% chronological training data and the following 10% for horizon-specific calibration. The final **20% is sealed**; it is neither trained on nor used for tuning. The [public-data baseline workflow](https://github.com/shashwatt22/DemandForecasting/actions/workflows/public-backtests.yml) evaluates only development periods.
+
+**Next:** add production-time external regressors that are genuinely observable at forecast creation, independently verify sealed-test coverage once after freezing the model, evaluate real payment datasets if suitable lawful data become available, and quantify uncertainty under abrupt regime changes.
 
 ## Testing
 

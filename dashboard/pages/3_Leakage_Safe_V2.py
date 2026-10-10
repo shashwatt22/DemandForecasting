@@ -74,7 +74,7 @@ if selector=="Stacked XGBoost + LightGBM + Ridge":
                              line=dict(width=0),opacity=0.3))
 fig.update_layout(height=440,xaxis_title="Historical time",
                   yaxis_title="Observed quantity or passenger count")
-st.plotly_chart(fig,use_container_width=True)
+st.plotly_chart(fig,width="stretch")
 st.metric("Development calibration origins",bundle["calibration_origins"])
 st.caption(
     "Intervals have a nominal 80% target with horizon-specific development "

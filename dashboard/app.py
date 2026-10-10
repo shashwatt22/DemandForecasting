@@ -14,8 +14,10 @@ pg = st.navigation([
             icon=":material/trending_up:", default=True),
     st.Page("pages/1_Model_Internals.py", title="Model Internals",
             icon=":material/architecture:"),
-    st.Page("pages/2_Evaluation.py",      title="Evaluation",
+    st.Page("pages/2_Evaluation.py",      title="Evaluation (legacy)",
             icon=":material/verified:"),
+    st.Page("pages/3_Leakage_Safe_V2.py", title="Leakage-safe v2",
+            icon=":material/trending_up:"),
 ])
 
 pg.run()

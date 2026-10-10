@@ -2,7 +2,7 @@
 
 A machine learning platform for forecasting airline bookings, e-commerce demand, and payment transactions using stacked ensemble learning.
 
-**Live Demo:** [DemandForecasting — Streamlit](https://domain-demand-forecasting.streamlit.app/)
+**Live Demo:** [DemandForecasting — Streamlit](https://demandforecasting-shashwat.streamlit.app/)
 
 ## Tech Stack
 

@@ -43,3 +43,17 @@ def test_invalid_horizon_rejected():
     bundle={"period":7,"freq":"D","max_horizon":3}
     with pytest.raises(ValueError):
         recursive_forecast(bundle,list(range(20)),pd.Timestamp("2024-01-20"),4)
+
+
+def test_nonfinite_history_rejected():
+    with pytest.raises(ValueError, match="finite"):
+        feature_row([1.0] * 19 + [float("nan")], pd.Timestamp("2024-02-01"), period=7)
+
+
+def test_duplicate_training_timestamps_rejected():
+    from src.models.leakage_safe_v2 import fit_domain
+    dates = pd.date_range("2024-01-01", periods=100, freq="D").tolist()
+    dates[22] = dates[21]
+    series = pd.Series(np.ones(100), index=pd.DatetimeIndex(dates))
+    with pytest.raises(ValueError, match="Duplicate"):
+        fit_domain("ecommerce", series)

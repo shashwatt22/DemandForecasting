@@ -6,6 +6,8 @@ on:
     paths:
       - "docker-compose.yml"
       - "Dockerfile.dashboard"
+      - ".dockerignore"
+      - "Dockerfile"
       - ".github/workflows/docker-smoke.yml"
 jobs:
   smoke:

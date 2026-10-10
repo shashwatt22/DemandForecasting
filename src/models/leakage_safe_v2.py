@@ -40,8 +40,10 @@ def known_time_features(timestamp: pd.Timestamp) -> dict[str, float]:
 
 def feature_row(history: list[float], timestamp: pd.Timestamp, period: int) -> dict[str, float]:
     """Past-only features. NO contemporaneous target, no future target."""
-    if len(history) < 2 * period:
+    if period < 1 or len(history) < 2 * period:
         raise ValueError("At least two complete seasons of history required")
+    if not np.isfinite(np.asarray(history, dtype=float)).all():
+        raise ValueError("Forecast history must contain only finite values")
     row = {
         "lag_1": float(history[-1]),
         "lag_season": float(history[-period]),
@@ -125,6 +127,10 @@ def fit_domain(domain: str, series: pd.Series) -> dict:
     if not isinstance(series.index, pd.DatetimeIndex):
         raise ValueError("DatetimeIndex required")
     series = series.sort_index().astype(float)
+    if not series.index.is_unique:
+        raise ValueError("Duplicate timestamps are not allowed")
+    if series.isna().any() or not np.isfinite(series.to_numpy()).all():
+        raise ValueError("Training series must contain finite observations")
     n = len(series)
     dev_end = int(n * 0.8)
     train_end = int(n * 0.7)

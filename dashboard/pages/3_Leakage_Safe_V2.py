@@ -82,3 +82,21 @@ st.caption(
     "Historical research origins are not current business predictions."
 )
 st.dataframe(pd.DataFrame({"Timestamp":dates,"Forecast":projected}),hide_index=True)
+
+
+st.subheader("Real-data baseline backtests (development only)")
+st.caption(
+    "Mean rolling-origin RMSE; historical public AirPassengers and UCI Online Retail. "
+    "These are ETS/baseline comparisons, not v2 stacked-model test scores. "
+    "The final 20% test period remains sealed."
+)
+st.dataframe(pd.DataFrame([
+    {"Dataset": "AirPassengers (monthly)", "Seasonal naive RMSE": 38.0374,
+     "Moving average RMSE": 50.7912, "Fitted ETS RMSE": 18.3335},
+    {"Dataset": "UCI Online Retail (daily)", "Seasonal naive RMSE": 7084.335,
+     "Moving average RMSE": 9778.8261, "Fitted ETS RMSE": 6559.7760},
+]), hide_index=True)
+st.caption(
+    "Reproducible computation: python -m src.evaluation.public_backtesting; "
+    "numbers originate from successful GitHub Actions development backtest."
+)

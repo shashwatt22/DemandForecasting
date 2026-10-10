@@ -1,0 +1,24 @@
+name: Public rolling-origin stacked-model backtest
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - "src/evaluation/public_stack_backtest.py"
+      - ".github/workflows/public-stack-backtest.yml"
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt openpyxl
+      - run: python -m src.evaluation.public_stack_backtest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: public-stack-development-results
+          path: results/public_stack_development.json

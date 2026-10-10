@@ -43,6 +43,7 @@ selector=st.selectbox("Forecast method",["Stacked XGBoost + LightGBM + Ridge",
 base=calibrated_forecast(bundle,horizon)
 history=np.asarray(bundle["history"],dtype=float)
 period=int(bundle["period"])
+last_time=pd.Timestamp(bundle["last_time"])
 if selector=="Calendar seasonal naive":
     projected=np.array([history[-period+(k%period)] for k in range(horizon)])
 elif selector=="Moving average":
@@ -53,7 +54,6 @@ elif selector in {"XGBoost only","LightGBM only"}:
 else:
     projected=np.asarray(base["forecast"])
 
-last_time=pd.Timestamp(bundle["last_time"])
 dates=pd.date_range(last_time,periods=horizon+1,freq=bundle["freq"])[1:]
 plot_history=pd.date_range(
     end=last_time,periods=min(len(history),max(3*period,24)),freq=bundle["freq"]

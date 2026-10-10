@@ -73,22 +73,31 @@ def base_models():
                       n_jobs=2, random_state=42, verbose=-1),
     )
 
-def one_step(bundle: dict[str, Any], history: list[float], stamp: pd.Timestamp) -> float:
+def one_step(bundle: dict[str, Any], history: list[float], stamp: pd.Timestamp,
+             estimator: str = "ridge") -> float:
     inputs = pd.DataFrame([feature_row(history, stamp, bundle["period"])])
     xgb = float(bundle["xgb"].predict(inputs)[0])
     lgb = float(bundle["lgb"].predict(inputs)[0])
-    result = float(bundle["ridge"].predict(np.array([[xgb, lgb]]))[0])
+    if estimator == "xgb":
+        result = xgb
+    elif estimator == "lgb":
+        result = lgb
+    elif estimator == "ridge":
+        result = float(bundle["ridge"].predict(np.array([[xgb, lgb]]))[0])
+    else:
+        raise ValueError("Unknown forecasting estimator")
     return max(0.0, result)
 
 def recursive_forecast(bundle: dict[str, Any], history: list[float],
-                       last_time: pd.Timestamp, steps: int) -> list[float]:
+                       last_time: pd.Timestamp, steps: int,
+                       estimator: str = "ridge") -> list[float]:
     if not 1 <= steps <= bundle["max_horizon"]:
         raise ValueError("Requested horizon outside calibrated range")
     values = list(map(float, history))
     future = pd.date_range(last_time, periods=steps + 1, freq=bundle["freq"])[1:]
     predicted = []
     for time in future:
-        value = one_step(bundle, values, time)
+        value = one_step(bundle, values, time, estimator=estimator)
         values.append(value)
         predicted.append(value)
     return predicted

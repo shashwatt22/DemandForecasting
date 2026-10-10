@@ -6,6 +6,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
+from functools import lru_cache
+import joblib
+from typing import Literal
+from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.schemas import (
@@ -257,3 +261,33 @@ def forecast_batch(req: BatchRequest):
         result = ensemble.predict("payment", features)
         results["payment"] = _make_response(result).model_dump()
     return results
+
+
+class V2ForecastRequest(BaseModel):
+    domain: Literal["airline", "ecommerce", "payment"]
+    horizon: int = Field(ge=1, le=24)
+
+
+@lru_cache(maxsize=3)
+def load_v2(domain: str):
+    model_file = PROJECT_ROOT / "models" / "v2" / f"{domain}.joblib"
+    if not model_file.is_file():
+        raise FileNotFoundError("v2 model not yet trained")
+    # These artifacts are built by our trusted training workflow, never uploads.
+    return joblib.load(model_file)
+
+
+@app.post("/api/v2/forecast")
+def forecast_history_v2(request: V2ForecastRequest):
+    """Historical research forecast, independent of legacy exogenous-feature API."""
+    from src.models.leakage_safe_v2 import calibrated_forecast
+    try:
+        bundle = load_v2(request.domain)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=503,detail=str(exc)) from exc
+    if request.horizon > bundle["max_horizon"]:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Maximum calibrated horizon for {request.domain}: {bundle['max_horizon']}",
+        )
+    return calibrated_forecast(bundle, request.horizon)

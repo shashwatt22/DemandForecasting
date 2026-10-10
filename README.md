@@ -116,3 +116,21 @@ This comparison uses real [AirPassengers](https://github.com/jbrownlee/Datasets/
 
 These are **means of per-origin RMSE** from the development-window backtesting job, not sealed-test scores or claims that the v2 stacked model beats ETS. For exact settings see [public backtesting source](src/evaluation/public_backtesting.py) and [passing CI execution](https://github.com/shashwatt22/DemandForecasting/actions/runs/38072743844).
 
+
+
+## Real-data stacked rolling-origin development benchmark
+
+The newer experiment evaluates all six forecasters on a *different*, six-origin subsample of the development period; the earlier ETS-only table above uses more rolling origins, so **do not compare values between the two experiments directly**.
+
+| Dataset / metric | Seasonal naive | Moving average | Fitted ETS | XGBoost | LightGBM | Ridge stack |
+|---|---:|---:|---:|---:|---:|---:|
+| AirPassengers RMSE | 36.920 | 58.896 | **13.134** | 30.447 | 53.373 | 59.059 |
+| AirPassengers MASE | 1.908 | 2.516 | **0.583** | 1.369 | 2.387 | 2.994 |
+| UCI Retail RMSE | 7863.323 | 10829.524 | **7423.101** | 8275.282 | 7559.601 | 7702.612 |
+| UCI Retail MASE | 0.768 | 1.097 | 0.759 | 0.817 | **0.732** | 0.757 |
+| AirPassengers nominal 80% band empirical coverage | — | — | — | 75.0% | 75.0% | 50.0% |
+| UCI Retail nominal 80% band empirical coverage | — | — | — | 46.4% | 46.4% | 50.0% |
+
+**ETS beats the stack on RMSE in both datasets.** The intervals, calibrated on preceding development origins only, **undercover**, especially on retail. This work does not establish that stacking is superior. MASE uses each origin's one-step training-period difference as denominator and averages per-origin values. No sealed 20% test labels were evaluated.
+
+[Passing reproducible benchmark](https://github.com/shashwatt22/DemandForecasting/actions/runs/38076250987) · [Source](src/evaluation/public_stack_backtest.py)

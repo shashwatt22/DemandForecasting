@@ -11,7 +11,7 @@ import streamlit as st
 PROJECT_ROOT=Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0,str(PROJECT_ROOT))
-from src.models.leakage_safe_v2 import PARAMS, calibrated_forecast  # noqa: E402 (Streamlit path bootstrap)
+from src.models.leakage_safe_v2 import PARAMS, calibrated_forecast, recursive_forecast  # noqa: E402 (Streamlit path bootstrap)
 
 st.title("Leakage-safe multi-step forecasting")
 st.caption(
@@ -38,6 +38,7 @@ def load_model(location:str):
 bundle=load_model(str(path))
 horizon=st.slider("Forecast horizon",1,int(bundle["max_horizon"]),min(3,int(bundle["max_horizon"])))
 selector=st.selectbox("Forecast method",["Stacked XGBoost + LightGBM + Ridge",
+                                          "XGBoost only","LightGBM only",
                                           "Calendar seasonal naive","Moving average"])
 base=calibrated_forecast(bundle,horizon)
 history=np.asarray(bundle["history"],dtype=float)
@@ -46,6 +47,9 @@ if selector=="Calendar seasonal naive":
     projected=np.array([history[-period+(k%period)] for k in range(horizon)])
 elif selector=="Moving average":
     projected=np.full(horizon,float(np.mean(history[-period:])))
+elif selector in {"XGBoost only","LightGBM only"}:
+    key="xgb" if selector=="XGBoost only" else "lgb"
+    projected=np.asarray(recursive_forecast(bundle,history.tolist(),last_time,horizon,estimator=key))
 else:
     projected=np.asarray(base["forecast"])
 

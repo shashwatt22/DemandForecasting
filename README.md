@@ -103,3 +103,16 @@ The [V2 training workflow](https://github.com/shashwatt22/DemandForecasting/acti
 ```bash
 pytest -q
 ```
+
+
+## Public-data rolling-origin backtest (development only)
+
+This comparison uses real [AirPassengers](https://github.com/jbrownlee/Datasets/blob/master/airline-passengers.csv) and [UCI Online Retail](https://archive.ics.uci.edu/dataset/352/online+retail) histories. Each baseline was refitted at rolling origins inside the first 80% of each series. **The final 20% was sealed and not evaluated.** RMSE units differ between domains.
+
+| Real public dataset | Seasonal naive RMSE | Moving-average RMSE | Fitted ETS RMSE |
+|---|---:|---:|---:|
+| International AirPassengers (monthly passenger count) | 38.0374 | 50.7912 | **18.3335** |
+| UCI Online Retail (daily item quantity) | 7084.3350 | 9778.8261 | **6559.7760** |
+
+These are **means of per-origin RMSE** from the development-window backtesting job, not sealed-test scores or claims that the v2 stacked model beats ETS. For exact settings see [public backtesting source](src/evaluation/public_backtesting.py) and [passing CI execution](https://github.com/shashwatt22/DemandForecasting/actions/runs/38072743844).
+

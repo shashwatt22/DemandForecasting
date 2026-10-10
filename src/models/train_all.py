@@ -31,9 +31,10 @@ def load_and_split(
 
 def evaluate_baselines(y_train: np.ndarray, y_test: np.ndarray, domain: str) -> dict:
     horizon = len(y_test)
+    season_length = 168 if domain == "payment" else 7
     baselines = {
         "naive": naive_forecast(y_train, horizon),
-        "seasonal_naive_7": seasonal_naive(y_train, season_length=7, horizon=horizon),
+        "seasonal_naive": seasonal_naive(y_train, season_length=season_length, horizon=horizon),
         "sma_7": simple_moving_average(y_train, window=7, horizon=horizon),
     }
     results = {}
@@ -80,14 +81,14 @@ def train_domain(
         "ensemble_meta_mae": mae(y_test.values, ens_forecast),
         "xgb_rmse_pct": rmse_pct(y_test.values, xgb_pred),
         "ensemble_meta_rmse_pct": rmse_pct(y_test.values, ens_forecast),
-        "ensemble_mase_7": mase(y_test.values, ens_forecast, y_train.values, seasonality=7),
+        "ensemble_mase": mase(y_test.values, ens_forecast, y_train.values, seasonality=(168 if domain_name == "payment" else 7)),
         "p10_p90_coverage": interval_coverage(y_test.values, result["lower_bound"], result["upper_bound"]),
         "p10_p90_mean_width": interval_mean_width(result["lower_bound"], result["upper_bound"]),
     }
 
     baseline_metrics = evaluate_baselines(y_train.values, y_test.values, domain_name)
-    seasonal_rmse = baseline_metrics[f"{domain_name}_seasonal_naive_7"]["rmse"]
-    metrics["rmse_reduction_vs_seasonal_naive_7_pct"] = (1 - metrics["ensemble_meta_rmse"] / seasonal_rmse) * 100 if seasonal_rmse else float("nan")
+    seasonal_rmse = baseline_metrics[f"{domain_name}_seasonal_naive"]["rmse"]
+    metrics["rmse_reduction_vs_seasonal_naive_pct"] = (1 - metrics["ensemble_meta_rmse"] / seasonal_rmse) * 100 if seasonal_rmse else float("nan")
 
     print(f"\n  XGBoost RMSE:        {metrics['xgb_rmse']:.4f} ({metrics['xgb_rmse_pct']:.2f}%)")
     print(f"  LightGBM RMSE:      {metrics['lgbm_rmse']:.4f}")
@@ -98,7 +99,7 @@ def train_domain(
     improvement = (best_single - metrics["ensemble_meta_rmse"]) / best_single * 100
     print(f"  Improvement over best single: {improvement:.1f}%")
     print(f"  Weekly seasonal-naive RMSE: {seasonal_rmse:.4f}")
-    print(f"  Ensemble MASE(7): {metrics[\u0022ensemble_mase_7\u0022]:.4f}")
+    print(f"  Ensemble seasonal MASE: {metrics[\u0022ensemble_mase_7\u0022]:.4f}")
     print(f"  P10-P90 empirical coverage: {metrics[\u0022p10_p90_coverage\u0022]:.1%}")
 
     return {**metrics, **baseline_metrics}

@@ -9,7 +9,7 @@ from src.features.payment_features import engineer_payment_features
 from src.models.base_model import DomainModel
 from src.models.ensemble import EnsembleForecaster
 from src.models.baselines import naive_forecast, seasonal_naive, simple_moving_average
-from src.evaluation.metrics import rmse, mae, mape, smape, r_squared, rmse_pct, percentile_error
+from src.evaluation.metrics import rmse, mae, mape, smape, r_squared, rmse_pct, percentile_error, mase, interval_coverage, interval_mean_width
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -80,9 +80,14 @@ def train_domain(
         "ensemble_meta_mae": mae(y_test.values, ens_forecast),
         "xgb_rmse_pct": rmse_pct(y_test.values, xgb_pred),
         "ensemble_meta_rmse_pct": rmse_pct(y_test.values, ens_forecast),
+        "ensemble_mase_7": mase(y_test.values, ens_forecast, y_train.values, seasonality=7),
+        "p10_p90_coverage": interval_coverage(y_test.values, result["lower_bound"], result["upper_bound"]),
+        "p10_p90_mean_width": interval_mean_width(result["lower_bound"], result["upper_bound"]),
     }
 
     baseline_metrics = evaluate_baselines(y_train.values, y_test.values, domain_name)
+    seasonal_rmse = baseline_metrics[f"{domain_name}_seasonal_naive_7"]["rmse"]
+    metrics["rmse_reduction_vs_seasonal_naive_7_pct"] = (1 - metrics["ensemble_meta_rmse"] / seasonal_rmse) * 100 if seasonal_rmse else float("nan")
 
     print(f"\n  XGBoost RMSE:        {metrics['xgb_rmse']:.4f} ({metrics['xgb_rmse_pct']:.2f}%)")
     print(f"  LightGBM RMSE:      {metrics['lgbm_rmse']:.4f}")
@@ -92,6 +97,9 @@ def train_domain(
     best_single = min(metrics["xgb_rmse"], metrics["lgbm_rmse"])
     improvement = (best_single - metrics["ensemble_meta_rmse"]) / best_single * 100
     print(f"  Improvement over best single: {improvement:.1f}%")
+    print(f"  Weekly seasonal-naive RMSE: {seasonal_rmse:.4f}")
+    print(f"  Ensemble MASE(7): {metrics[\u0022ensemble_mase_7\u0022]:.4f}")
+    print(f"  P10-P90 empirical coverage: {metrics[\u0022p10_p90_coverage\u0022]:.1%}")
 
     return {**metrics, **baseline_metrics}
 
